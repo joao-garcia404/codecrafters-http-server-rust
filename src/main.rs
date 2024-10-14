@@ -18,7 +18,14 @@ fn main() {
 
                 let response = match request_line.as_str() {
                     "GET / HTTP/1.1" => "HTTP/1.1 200 OK\r\n\r\n".to_string(),
-                    _ if request_line.starts_with("GET /echo/") => {
+                    "GET /user-agent HTTP/1.1" => {
+                        let req_headers = request_line.split("\r\n\r\n").nth(1).unwrap();
+
+                        println!("req_headers: {}", req_headers);
+
+                        "Ok".to_string()
+                    }
+                    _ if request_line.starts_with("GET /echo") => {
                         println!("echo request_line: {}", request_line);
                         let path = request_line.split(" ").nth(1).unwrap();
 
