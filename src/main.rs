@@ -14,16 +14,44 @@ fn main() {
                 println!("accepted new connection");
 
                 let buf_reader = BufReader::new(&mut stream);
-                let request_line = buf_reader.lines().next().unwrap().unwrap();
+                let mut request = Vec::new();
 
-                let response = match request_line.as_str() {
+                for line in buf_reader.lines() {
+                    let line = line.unwrap();
+                    if line.is_empty() {
+                        break;
+                    }
+
+                    request.push(line);
+                }
+
+                let request_line = request.first().unwrap().as_str();
+                let request_headers = request
+                    .iter()
+                    .skip(1)
+                    .take_while(|line| {
+                        let line = line.to_string();
+                        line != ""
+                    })
+                    .collect::<Vec<&String>>();
+
+                let response = match request_line {
                     "GET / HTTP/1.1" => "HTTP/1.1 200 OK\r\n\r\n".to_string(),
                     "GET /user-agent HTTP/1.1" => {
-                        let req_headers = request_line.split("\r\n\r\n").nth(1).unwrap();
+                        let user_agent = request_headers
+                            .iter()
+                            .find(|&&line| line.starts_with("User-Agent"))
+                            .map(|line| line.as_str())
+                            .unwrap_or("User-Agent: Unknown")
+                            .split(": ")
+                            .nth(1)
+                            .unwrap_or_else(|| "Unknown");
 
-                        println!("req_headers: {}", req_headers);
-
-                        "Ok".to_string()
+                        format!(
+                            "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{}",
+                            user_agent.len(),
+                            user_agent,
+                        )
                     }
                     _ if request_line.starts_with("GET /echo") => {
                         println!("echo request_line: {}", request_line);
