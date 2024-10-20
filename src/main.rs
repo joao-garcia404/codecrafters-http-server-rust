@@ -1,3 +1,4 @@
+use std::env;
 use std::io::Write;
 use std::io::{BufRead, BufReader};
 use std::net::{TcpListener, TcpStream};
@@ -39,6 +40,35 @@ fn main() {
                             response.add_body(param);
 
                             response.to_string()
+                        }
+                        _ if request.line.as_str().starts_with("GET /files") => {
+                            let path = request.get_path().unwrap();
+                            let file_name = path.split("/").last().unwrap();
+                            let env_args = env::args().collect::<Vec<String>>();
+
+                            let file_directory = match env_args.get(2) {
+                                Some(file_directory) => file_directory.to_string(),
+                                None => Response::new(ResponseStatus::NotFound).to_string(),
+                            };
+
+                            let file_pathname = format!("/{}/{}", &file_directory, file_name);
+                            let file = std::fs::read_to_string(file_pathname);
+
+                            match file {
+                                Ok(file) => {
+                                    let file_len = file.len();
+
+                                    let mut response = Response::new(ResponseStatus::Ok);
+
+                                    response.add_header("Content-Type", "application/octet-stream");
+                                    response.add_header("Content-Length", &file_len.to_string());
+
+                                    response.add_body(&file);
+
+                                    response.to_string()
+                                }
+                                Err(_) => Response::new(ResponseStatus::NotFound).to_string(),
+                            }
                         }
                         _ => Response::new(ResponseStatus::NotFound).to_string(),
                     };
