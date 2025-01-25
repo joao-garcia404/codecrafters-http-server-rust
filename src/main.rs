@@ -36,8 +36,14 @@ fn main() {
 
                             response.add_header("Content-Type", "text/plain");
                             response.add_header("Content-Length", &param_len.to_string());
-                            response.add_body(param);
 
+                            let encoding = request.get_header("Accept-Encoding");
+
+                            if let Some(encoding) = encoding {
+                                response.compress_headers(encoding);
+                            }
+
+                            response.add_body(param);
                             response.to_string()
                         }
                         _ if request.line.as_str().starts_with("GET /files") => {
@@ -143,7 +149,7 @@ impl ToString for Response {
 impl Response {
     fn new(status: ResponseStatus) -> Response {
         Response {
-            status: status,
+            status,
             headers: Vec::new(),
             body: None,
         }
@@ -151,6 +157,15 @@ impl Response {
 
     fn add_header(&mut self, key: &str, value: &str) {
         self.headers.push(format!("{}: {}", key, value));
+    }
+
+    fn compress_headers(&mut self, encoding: &str) {
+        match encoding {
+            "gzip" => {
+                self.add_header("Content-Encoding", "gzip");
+            }
+            _ => {}
+        }
     }
 
     fn add_body(&mut self, body: &str) {
