@@ -37,10 +37,10 @@ fn main() {
                             response.add_header("Content-Type", "text/plain");
                             response.add_header("Content-Length", &param_len.to_string());
 
-                            let encoding = request.get_header("Accept-Encoding");
+                            let compression_schemes = request.get_header("Accept-Encoding");
 
-                            if let Some(encoding) = encoding {
-                                response.compress_headers(encoding);
+                            if let Some(compression_schemes) = compression_schemes {
+                                response.compress_headers(compression_schemes);
                             }
 
                             response.add_body(param);
@@ -159,12 +159,17 @@ impl Response {
         self.headers.push(format!("{}: {}", key, value));
     }
 
-    fn compress_headers(&mut self, encoding: &str) {
-        match encoding {
-            "gzip" => {
-                self.add_header("Content-Encoding", "gzip");
+    fn compress_headers(&mut self, schemes: &str) {
+        let schemes = schemes.split(",");
+
+        for scheme in schemes {
+            match scheme.trim() {
+                "gzip" => {
+                    self.add_header("Content-Encoding", "gzip");
+                    return;
+                }
+                _ => {}
             }
-            _ => {}
         }
     }
 
